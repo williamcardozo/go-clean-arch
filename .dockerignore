@@ -1,0 +1,10 @@
+.git
+.gitignore
+README.md
+api.http
+Makefile
+generate-proto.sh
+.env
+.vscode
+.idea
+*.md
