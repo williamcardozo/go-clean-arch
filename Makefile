@@ -1,4 +1,4 @@
-.PHONY: proto graphql generate run test clean docker-up docker-down
+.PHONY: proto graphql generate run test clean docker-up docker-down docker-down-keep test-all
 
 proto:
 	@echo "Generating protobuf files..."
@@ -35,10 +35,10 @@ docker-up:
 	@docker compose up --build
 
 docker-down:
-	@docker compose down
-
-docker-down-v:
 	@docker compose down -v
+
+docker-down-keep:
+	@docker compose down
 
 install-tools:
 	@echo "Installing protoc plugins..."
@@ -46,6 +46,11 @@ install-tools:
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@go install github.com/99designs/gqlgen@latest
 	@echo "Tools installed successfully!"
+	@echo ""
+	@echo "Installing evans..."
+	@brew tap ktr0731/evans
+	@brew install evans || echo "evans already installed or brew not available"
+	@echo "Done!"
 
 help:
 	@echo "Available commands:"
@@ -56,6 +61,21 @@ help:
 	@echo "  make test           - Run tests"
 	@echo "  make clean          - Clean generated files"
 	@echo "  make docker-up      - Start Docker containers"
-	@echo "  make docker-down    - Stop Docker containers"
-	@echo "  make docker-down-v  - Stop Docker containers and remove volumes"
-	@echo "  make install-tools  - Install required tools"
+	@echo "  make docker-down    - Stop Docker containers and remove volumes (clean state)"
+	@echo "  make docker-down-keep - Stop Docker containers keeping volumes (keep data)"
+	@echo "  make install-tools  - Install required tools (protoc, gqlgen, evans)"
+
+test-all:
+	@echo "Testing all interfaces..."
+	@echo "\n=== REST API - Create Order ==="
+	@curl -s -X POST http://localhost:8000/order -H "Content-Type: application/json" -d '{"id":"rest-'$$(date +%s)'","price":100,"tax":10}' | jq . || true
+	@echo "\n=== REST API - List Orders ==="
+	@curl -s http://localhost:8000/order | jq 'length' | xargs -I {} echo "Total orders: {}"
+	@echo "\n=== GraphQL - Create Order ==="
+	@curl -s -X POST http://localhost:8080/query -H "Content-Type: application/json" -d '{"query":"mutation { createOrder(input: {id: \"gql-'$$(date +%s)'\", price: 200, tax: 20}) { id price tax finalPrice } }"}' | jq . || true
+	@echo "\n=== GraphQL - List Orders ==="
+	@curl -s -X POST http://localhost:8080/query -H "Content-Type: application/json" -d '{"query":"{ orders { id price tax finalPrice } }"}' | jq '.data.orders | length' | xargs -I {} echo "Total orders: {}"
+	@echo "\n=== gRPC - Create Order ==="
+	@echo '{"id":"grpc-'$$(date +%s)'","price":300,"tax":30}' | evans --host localhost --port 50051 -r cli call pb.OrderService.CreateOrder || true
+	@echo "\n=== gRPC - List Orders ==="
+	@echo '{}' | evans --host localhost --port 50051 -r cli call pb.OrderService.ListOrders | jq '.orders | length' | xargs -I {} echo "Total orders: {}"

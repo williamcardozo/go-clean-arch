@@ -34,3 +34,18 @@ Content-Type: application/json
 }
 
 ###
+
+### gRPC - Interactive Mode
+evans -r repl -p 50051
+
+###
+
+### gRPC - CLI Create Order
+echo '{"id":"c","price":300,"tax":30}' | evans --host localhost --port 50051 -r cli call pb.OrderService.CreateOrder
+
+###
+
+### gRPC - CLI List Orders
+echo '{}' | evans --host localhost --port 50051 -r cli call pb.OrderService.ListOrders
+
+###

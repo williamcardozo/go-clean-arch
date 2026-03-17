@@ -13,12 +13,10 @@ func NewDBConnection(dsn string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	// Configurações de pool
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// Tenta conectar com retry
 	for i := 0; i < 30; i++ {
 		err = db.Ping()
 		if err == nil {

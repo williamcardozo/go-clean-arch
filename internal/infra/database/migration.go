@@ -10,7 +10,6 @@ import (
 )
 
 func RunMigrations(db *sql.DB, migrationsPath string) error {
-	// Cria tabela de controle de migrações
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version VARCHAR(255) PRIMARY KEY,
@@ -21,13 +20,11 @@ func RunMigrations(db *sql.DB, migrationsPath string) error {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
-	// Lê arquivos de migração
 	files, err := os.ReadDir(migrationsPath)
 	if err != nil {
 		return fmt.Errorf("failed to read migrations directory: %w", err)
 	}
 
-	// Ordena arquivos
 	var migrationFiles []string
 	for _, file := range files {
 		if !file.IsDir() && filepath.Ext(file.Name()) == ".sql" {
@@ -36,9 +33,7 @@ func RunMigrations(db *sql.DB, migrationsPath string) error {
 	}
 	sort.Strings(migrationFiles)
 
-	// Executa migrações
 	for _, filename := range migrationFiles {
-		// Verifica se já foi aplicada
 		var count int
 		err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE version = ?", filename).Scan(&count)
 		if err != nil {
@@ -50,19 +45,16 @@ func RunMigrations(db *sql.DB, migrationsPath string) error {
 			continue
 		}
 
-		// Lê conteúdo da migração
 		content, err := os.ReadFile(filepath.Join(migrationsPath, filename))
 		if err != nil {
 			return fmt.Errorf("failed to read migration %s: %w", filename, err)
 		}
 
-		// Executa migração
 		_, err = db.Exec(string(content))
 		if err != nil {
 			return fmt.Errorf("failed to execute migration %s: %w", filename, err)
 		}
 
-		// Registra migração aplicada
 		_, err = db.Exec("INSERT INTO schema_migrations (version) VALUES (?)", filename)
 		if err != nil {
 			return fmt.Errorf("failed to register migration %s: %w", filename, err)

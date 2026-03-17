@@ -1,8 +1,6 @@
 package entity
 
-import (
-	"errors"
-)
+import "errors"
 
 type Order struct {
 	ID         string
@@ -40,9 +38,5 @@ func (o *Order) IsValid() error {
 
 func (o *Order) CalculateFinalPrice() error {
 	o.FinalPrice = o.Price + o.Tax
-	err := o.IsValid()
-	if err != nil {
-		return err
-	}
-	return nil
+	return o.IsValid()
 }
